@@ -258,4 +258,27 @@ if __name__ == "__main__":
     # Render için, Gunicorn 'web_server'ı başlatacak.
     # 'post_init' fonksiyonu, bot Application'ı oluşturulurken çağrılacak ve alarm kontrolünü başlatacak.
     # Telegram botunun kendisi ise Gunicorn'ın ana process'i içinde bir asyncio görevi olarak çalışacak.
+    # === Web Sunucusu (Flask - Gunicorn tarafından çalıştırılacak) ===
+web_server = Flask(__name__)
+
+# Flask uygulaması başladıktan sonra çalışacak kod
+@web_server.before_first_request
+def start_bot_after_flask_starts():
+    def run_bot():
+        # Kendi asyncio event loop'unu oluştur ve botu başlat
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(start_telegram_bot_main())
+        loop.close()
+
+    # Botu ayrı bir thread'de başlat ki Flask uygulamasının çalışmasını engellemesin
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    print("Flask başladı, Telegram botu arka planda başlatılıyor...")
+
+@web_server.route('/')
+def home():
+    """Render.com'un ve Uptime Robot'un kontrol edeceği ana sayfa."""
+    return "<h2>Bot Aktif! 🚀</h2><p>Web arayüzüne hoş geldin!</p>"
+
     pass # Bu 'pass' satırı burada kalsa da olur, Gunicorn zaten Flask objesini çalıştıracak.
