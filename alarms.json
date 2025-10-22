@@ -1,0 +1,14 @@
+[
+  {
+    "symbol": "PEPEUSDT",
+    "target": 9.163e-06,
+    "direction": "above",
+    "message": "SAT"
+  },
+  {
+    "symbol": "GC=F",
+    "target": 3987.0,
+    "direction": "below",
+    "message": "destek seviyesi"
+  }
+]
