@@ -161,14 +161,20 @@ async def web_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # === Telegram botu başlat ===
 def start_bot():
     threading.Thread(target=check_alarms, daemon=True).start()
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("alarm_ekle", add_alarm))
-    app.add_handler(CommandHandler("alarm_listele", list_alarms))
-    app.add_handler(CommandHandler("alarm_sil", remove_alarm))
-    app.add_handler(CommandHandler("web", web_command))
-    print("🤖 Telegram botu çalışıyor...")
-    app.run_polling()
+
+    async def main():
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("alarm_ekle", add_alarm))
+        app.add_handler(CommandHandler("alarm_listele", list_alarms))
+        app.add_handler(CommandHandler("alarm_sil", remove_alarm))
+        app.add_handler(CommandHandler("web", web_command))
+        print("🤖 Telegram botu çalışıyor...")
+        await app.run_polling()
+
+    import asyncio
+    asyncio.run(main())
+
 
 
 # === Flask (UptimeRobot + WebApp için) ===
