@@ -170,28 +170,44 @@ async def start_bot_async():
     await app.run_polling()
 
 
-# === Flask (UptimeRobot + Render için) ===
+# === Flask (UptimeRobot + WebApp için) ===
 app_flask = Flask(__name__)
-
 
 @app_flask.route('/')
 def home():
     return "<h2>Bot aktif 🚀</h2><p>Web Arayüzüne hoş geldin!</p>"
 
-
 def run_flask():
     app_flask.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
 
+# === Telegram botu başlat ===
+def start_bot():
+    import asyncio
+    async def main():
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("alarm_ekle", add_alarm))
+        app.add_handler(CommandHandler("alarm_listele", list_alarms))
+        app.add_handler(CommandHandler("alarm_sil", remove_alarm))
+        app.add_handler(CommandHandler("web", web_command))
+
+        # Alarm kontrolünü ayrı thread’de çalıştır
+        threading.Thread(target=check_alarms, daemon=True).start()
+
+        print("🤖 Telegram botu çalışıyor...")
+        await app.run_polling()
+
+    asyncio.run(main())
 
 # === Ana başlatma ===
 if __name__ == "__main__":
-    # Flask'ı ayrı bir thread'de çalıştır
+    # Önce Flask'i ayrı thread olarak başlat
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
-    # Telegram botunu ayrı thread'de çalıştır
-    threading.Thread(target=lambda: asyncio.run(start_bot_async()), daemon=True).start()
+    # Render ortam değişkeninden URL al (yoksa localhost)
+    url = os.getenv("RENDER_EXTERNAL_URL") or "http://localhost:8080"
+    print(f"🌐 Flask web arayüzü aktif. Aşağıdaki linki kopyala:\n➡️  {url}")
 
-    # Render ortamı botu kapatmasın diye ana thread açık kalır
-    while True:
-        time.sleep(60)
+    # Ardından Telegram botunu ana thread'de başlat
+    start_bot()
