@@ -192,9 +192,9 @@ if __name__ == "__main__":
 
     # 3 saniye bekle, sonra Replit linkini al ve yazdır
     time.sleep(3)
-    print("🌐 Flask web arayüzü aktif. Aşağıdaki linki kopyala:")
-    print("➡️  https://" + os.getenv("REPL_SLUG") + "." +
-          os.getenv("REPL_OWNER") + ".repl.co")
+    url = os.getenv("RENDER_EXTERNAL_URL") or "http://localhost:8080"
+    print(f"🌐 Flask web arayüzü aktif. Aşağıdaki linki kopyala:\n➡️  {url}")
+
 
     # Telegram botunu başlat
     start_bot()
