@@ -86,6 +86,7 @@ async def alarm_sil(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         await update.message.reply_text("❌ Kullanım: /alarm_sil Sembol")
 
+
 # === Alarm kontrol fonksiyonu === #
 def check_alarms():
     while True:
@@ -117,26 +118,6 @@ def send_message(chat_id, text):
         print("Mesaj gönderilemedi:", e)
 
 
-# === Bot başlatıcı === #
-def start_bot():
-    async def main():
-        app = ApplicationBuilder().token(BOT_TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("help", help_command))
-        app.add_handler(CommandHandler("alarm_ekle", alarm_ekle))
-        app.add_handler(CommandHandler("alarm_listele", alarm_listele))
-        app.add_handler(CommandHandler("alarm_sil", alarm_sil))
-
-        threading.Thread(target=check_alarms, daemon=True).start()
-        print("🤖 Telegram botu çalışıyor...")
-        await app.run_polling()
-
-    # Flask ile çakışmayan bağımsız event loop oluştur
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(main())
-
-
 # === Uygulama Başlat === #
 if __name__ == "__main__":
     # Flask web sunucusunu ayrı thread’de başlat
@@ -147,9 +128,21 @@ if __name__ == "__main__":
     url = os.getenv("RENDER_EXTERNAL_URL") or "http://localhost:8080"
     print(f"🌐 Flask web arayüzü aktif. Aşağıdaki linki kopyala:\n➡️  {url}")
 
-    # Telegram botunu ayrı thread’de çalıştır
-    bot_thread = threading.Thread(target=start_bot, daemon=True)
-    bot_thread.start()
+    # Telegram botunu asenkron başlat
+    async def start_async_bot():
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("alarm_ekle", alarm_ekle))
+        app.add_handler(CommandHandler("alarm_listele", alarm_listele))
+        app.add_handler(CommandHandler("alarm_sil", alarm_sil))
 
-    # Ana thread'i açık tut
-    bot_thread.join()
+        threading.Thread(target=check_alarms, daemon=True).start()
+        print("🤖 Telegram botu çalışıyor...")
+
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
+        await asyncio.Event().wait()  # Sonsuza kadar açık kal
+
+    asyncio.run(start_async_bot())
