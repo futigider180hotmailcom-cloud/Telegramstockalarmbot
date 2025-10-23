@@ -15,7 +15,26 @@ load_dotenv()
 
 # === Telegram ayarları ===
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = int(os.getenv("CHAT_ID"))
+
+chat_id_raw = os.getenv("CHAT_ID")
+CHAT_ID = None
+
+try:
+    if chat_id_raw:
+        CHAT_ID = int(chat_id_raw)
+except (TypeError, ValueError):
+    print("⚠️  CHAT_ID ortam değişkeni bir tam sayı olmalıdır.")
+    CHAT_ID = None
+
+TELEGRAM_ENABLED = True
+
+if not BOT_TOKEN:
+    print("⚠️  BOT_TOKEN ortam değişkeni bulunamadı. Telegram botu başlatılmayacak.")
+    TELEGRAM_ENABLED = False
+
+if CHAT_ID is None:
+    print("⚠️  CHAT_ID ortam değişkeni geçerli değil. Telegram botu başlatılmayacak.")
+    TELEGRAM_ENABLED = False
 
 ALARMS_FILE = "alarms.json"
 CHECK_INTERVAL = 60  # saniye
@@ -36,8 +55,15 @@ def save_alarms(alarms):
 
 
 def send_message(text):
+    if not TELEGRAM_ENABLED:
+        print(f"📭 Telegram devre dışı: {text}")
+        return
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": CHAT_ID, "text": text})
+    try:
+        requests.post(url, json={"chat_id": CHAT_ID, "text": text}, timeout=10)
+    except requests.RequestException as exc:
+        print(f"❌ Telegram mesajı gönderilemedi: {exc}")
 
 
 def get_price(symbol):
@@ -80,7 +106,13 @@ async def add_alarm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         symbol = context.args[0].upper()
         target = float(context.args[1])
-        direction = "above" if target >= get_price(symbol) else "below"
+        current_price = get_price(symbol)
+
+        if current_price is None:
+            await update.message.reply_text("❌ Sembol fiyatı alınamadı. Lütfen tekrar deneyin.")
+            return
+
+        direction = "above" if target >= current_price else "below"
         message = " ".join(context.args[2:]) if len(context.args) > 2 else ""
         alarms = load_alarms()
         alarms.append({
@@ -159,6 +191,10 @@ async def web_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === Telegram botu başlat ===
 async def start_bot_async():
+    if not TELEGRAM_ENABLED:
+        print("⚠️  Telegram botu devre dışı bırakıldı. Ortam değişkenlerini kontrol edin.")
+        return
+
     threading.Thread(target=check_alarms, daemon=True).start()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("help", help_command))
@@ -180,7 +216,14 @@ def home():
 
 
 def run_flask():
-    app_flask.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
+    port_str = os.getenv("PORT", "8080")
+    try:
+        port = int(port_str)
+    except ValueError:
+        print(f"⚠️  PORT ortam değişkeni geçersiz ('{port_str}'). Varsayılan 8080 kullanılacak.")
+        port = 8080
+
+    app_flask.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 
 # === Ana başlatma ===
