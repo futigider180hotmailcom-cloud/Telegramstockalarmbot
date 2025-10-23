@@ -6,6 +6,7 @@ import yfinance as yf
 import json
 import time
 import os
+import asyncio
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
@@ -144,10 +145,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(help_text)
 
 
-# === Yeni: Web arayüzü butonu ===
 async def web_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Buraya kendi URL’ini koy (ngrok veya sunucu linkin)
-    web_url = "https://7df5e175-45d0-426c-bc51-31463e91adce-00-wnyb5jz19m0o.sisko.replit.dev/"
+    web_url = "https://telegramstockalarmbot.onrender.com/"
     keyboard = [[
         InlineKeyboardButton("🌐 Web Uygulamasını Aç",
                              web_app=WebAppInfo(url=web_url))
@@ -159,25 +158,19 @@ async def web_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # === Telegram botu başlat ===
-def start_bot():
+async def start_bot_async():
     threading.Thread(target=check_alarms, daemon=True).start()
-
-    async def main():
-        app = ApplicationBuilder().token(BOT_TOKEN).build()
-        app.add_handler(CommandHandler("help", help_command))
-        app.add_handler(CommandHandler("alarm_ekle", add_alarm))
-        app.add_handler(CommandHandler("alarm_listele", list_alarms))
-        app.add_handler(CommandHandler("alarm_sil", remove_alarm))
-        app.add_handler(CommandHandler("web", web_command))
-        print("🤖 Telegram botu çalışıyor...")
-        await app.run_polling()
-
-    import asyncio
-    asyncio.run(main())
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("alarm_ekle", add_alarm))
+    app.add_handler(CommandHandler("alarm_listele", list_alarms))
+    app.add_handler(CommandHandler("alarm_sil", remove_alarm))
+    app.add_handler(CommandHandler("web", web_command))
+    print("🤖 Telegram botu çalışıyor...")
+    await app.run_polling()
 
 
-
-# === Flask (UptimeRobot + WebApp için) ===
+# === Flask (UptimeRobot + Render için) ===
 app_flask = Flask(__name__)
 
 
@@ -192,13 +185,13 @@ def run_flask():
 
 # === Ana başlatma ===
 if __name__ == "__main__":
-    # Flask sunucusunu ayrı bir thread olarak başlat
+    # Flask'ı ayrı bir thread'de çalıştır
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
-    # Render ortam değişkeninden URL al (yoksa localhost)
-    url = os.getenv("RENDER_EXTERNAL_URL") or "http://localhost:8080"
-    print(f"🌐 Flask web arayüzü aktif. Aşağıdaki linki kopyala:\n➡️  {url}")
+    # Telegram botunu ayrı thread'de çalıştır
+    threading.Thread(target=lambda: asyncio.run(start_bot_async()), daemon=True).start()
 
-    # Telegram botunu başlat
-    start_bot()
+    # Render ortamı botu kapatmasın diye ana thread açık kalır
+    while True:
+        time.sleep(60)
