@@ -180,9 +180,9 @@ def home():
 def run_flask():
     app_flask.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
 
+
 # === Telegram botu başlat ===
 def start_bot():
-    import asyncio
     async def main():
         app = ApplicationBuilder().token(BOT_TOKEN).build()
         app.add_handler(CommandHandler("help", help_command))
@@ -191,17 +191,17 @@ def start_bot():
         app.add_handler(CommandHandler("alarm_sil", remove_alarm))
         app.add_handler(CommandHandler("web", web_command))
 
-        # Alarm kontrolünü ayrı thread’de çalıştır
         threading.Thread(target=check_alarms, daemon=True).start()
-
         print("🤖 Telegram botu çalışıyor...")
         await app.run_polling()
 
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+
 
 # === Ana başlatma ===
 if __name__ == "__main__":
-    # Önce Flask'i ayrı thread olarak başlat
+    # Flask sunucusunu ayrı thread olarak başlat
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
@@ -209,5 +209,5 @@ if __name__ == "__main__":
     url = os.getenv("RENDER_EXTERNAL_URL") or "http://localhost:8080"
     print(f"🌐 Flask web arayüzü aktif. Aşağıdaki linki kopyala:\n➡️  {url}")
 
-    # Ardından Telegram botunu ana thread'de başlat
+    # Telegram botunu başlat
     start_bot()
