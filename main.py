@@ -190,12 +190,9 @@ if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
-    # 3 saniye bekle, sonra Replit linkini al ve yazdır
-    time.sleep(3)
+    # Render ortam değişkeninden URL al (yoksa localhost)
     url = os.getenv("RENDER_EXTERNAL_URL") or "http://localhost:8080"
     print(f"🌐 Flask web arayüzü aktif. Aşağıdaki linki kopyala:\n➡️  {url}")
 
-
     # Telegram botunu başlat
     start_bot()
- 
